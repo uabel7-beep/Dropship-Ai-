@@ -128,6 +128,7 @@ def hunter_categories_menu():
 def hunter_main_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🎯 Trouver des clients", callback_data="hunter_find")],
+        [InlineKeyboardButton("⚡ Chasse rapide", callback_data="hunter_quick")],
         [InlineKeyboardButton("👥 Mes prospects", callback_data="hunter_prospects")],
         [InlineKeyboardButton("✍️ Générer un message", callback_data="hunter_message")],
         [InlineKeyboardButton("📈 Suivi des prospects", callback_data="hunter_pipeline")],
@@ -148,9 +149,16 @@ def hunter_prospects_menu(prospects):
     return InlineKeyboardMarkup(rows)
 
 
-def prospect_detail_menu(pid):
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✍️ Générer message", callback_data=f"message:{pid}")],
+def prospect_detail_menu(pid, website=None, maps_url=None):
+    rows = [[InlineKeyboardButton("✍️ Générer message", callback_data=f"message:{pid}")]]
+    links = []
+    if website:
+        links.append(InlineKeyboardButton("🌐 Site", url=website))
+    if maps_url:
+        links.append(InlineKeyboardButton("📍 Maps", url=maps_url))
+    if links:
+        rows.append(links)
+    rows.extend([
         [
             InlineKeyboardButton("📨 Contacté", callback_data=f"status:{pid}:contacted"),
             InlineKeyboardButton("💬 Répondu", callback_data=f"status:{pid}:replied"),
@@ -161,6 +169,17 @@ def prospect_detail_menu(pid):
         ],
         [InlineKeyboardButton("↩️ Mes prospects", callback_data="hunter_prospects")],
     ])
+    return InlineKeyboardMarkup(rows)
+
+
+def hunter_results_menu(results):
+    rows = []
+    for p in results[:10]:
+        label = f"#{p['id']} {p['name'][:24]} • {p['score']}/100"
+        rows.append([InlineKeyboardButton(label, callback_data=f"prospect:{p['id']}")])
+    rows.append([InlineKeyboardButton("🎯 Nouvelle chasse", callback_data="hunter_find")])
+    rows.append([InlineKeyboardButton("↩️ Hunter AI", callback_data="hunter_menu")])
+    return InlineKeyboardMarkup(rows)
 
 
 def hunter_back_menu():

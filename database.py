@@ -93,6 +93,20 @@ def init_db():
 
         # Hunter AI tables are initialized alongside the existing Dropship database.
         conn.execute("""CREATE TABLE IF NOT EXISTS prospects (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, name TEXT NOT NULL, platform TEXT NOT NULL, contact TEXT, niche TEXT, need TEXT, status TEXT NOT NULL DEFAULT 'new', score INTEGER NOT NULL DEFAULT 0, notes TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)""")
+        prospect_columns = _columns(conn, "prospects")
+        prospect_migrations = {
+            "website": "TEXT",
+            "address": "TEXT",
+            "phone": "TEXT",
+            "source": "TEXT NOT NULL DEFAULT 'manual'",
+            "external_id": "TEXT",
+            "rating": "REAL",
+            "review_count": "INTEGER",
+            "maps_url": "TEXT",
+        }
+        for column, definition in prospect_migrations.items():
+            if column not in prospect_columns:
+                conn.execute(f"ALTER TABLE prospects ADD COLUMN {column} {definition}")
         conn.execute("""CREATE TABLE IF NOT EXISTS hunter_settings (user_id INTEGER PRIMARY KEY, offer TEXT NOT NULL DEFAULT '', target TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL)""")
         conn.commit()
 

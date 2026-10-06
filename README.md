@@ -27,3 +27,14 @@ Une livraison inconnue reste « à vérifier » : elle n'est jamais considérée
 4. Clique sur `🔍 #1` pour charger l'analyse détaillée.
 
 Les valeurs `AD_COST_RATE` et `PLATFORM_FEE_RATE` sont dans `config.py` pour être modifiables plus tard sans changer l'interface.
+
+
+## Hunter AI V2 — chasse réelle
+
+Hunter AI peut maintenant rechercher des entreprises publiques par **cible + ville**, les scorer, éviter les doublons et les enregistrer dans le pipeline.
+
+- Avec `GOOGLE_PLACES_API_KEY` : Google Places Text Search.
+- Sans clé : fallback OpenStreetMap/Overpass pour une recherche publique à faible volume.
+- Le bot ne spamme pas et n'envoie aucun message automatiquement. Les messages sont préparés pour validation humaine.
+
+Variables : `BOT_TOKEN`, `ADMIN_ID` (ou valeur actuelle dans config), `GOOGLE_PLACES_API_KEY`, `DROPSHIP_DB`.
