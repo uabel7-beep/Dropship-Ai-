@@ -7,7 +7,7 @@ load_dotenv(BASE_DIR / "token.env", override=False)
 load_dotenv(BASE_DIR / ".env", override=False)
 
 # Conservés exactement comme dans ton projet actuel.
-BOT_TOKEN = "8721671832:AAF3os33FXhMIZ_sHt_FDUjKJWSnM8VipfA"
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8721671832:AAF3os33FXhMIZ_sHt_FDUjKJWSnM8VipfA")
 ADMIN_ID = 8519505699
 
 DB_NAME = os.getenv("DROPSHIP_DB", "dropship_ai.db")
@@ -15,7 +15,7 @@ MAX_PRODUCT_NAME_LENGTH = 120
 MAX_PRODUCTS_TO_SHOW = 10
 
 # Optional live Product Hunter settings. Leave empty until API access is available.
-REEF_API_KEY = os.getenv("REEF_API_KEY", "")
+REEF_API_KEY = os.getenv("REEF_API_KEY", "ak_live_BN_sT72dzyhO7Bv-y0m5MOFsvi-mpsOt")
 REEF_API_BASE_URL = os.getenv("REEF_API_BASE_URL", "https://api.reefapi.com")
 
 # Profit Engine assumptions (kept simple and visible in the code).
@@ -23,3 +23,9 @@ AD_COST_RATE = 0.15
 PLATFORM_FEE_RATE = 0.05
 LIVE_SEARCH_TIMEOUT = 18
 LIVE_DETAIL_TIMEOUT = 15
+
+# Hunter AI lead discovery. Google Places is optional; without a key, Hunter
+# uses OpenStreetMap/Overpass for low-volume public business discovery.
+GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
+HUNTER_SEARCH_TIMEOUT = 15
+HUNTER_MAX_RESULTS = 20
