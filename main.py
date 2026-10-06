@@ -9,9 +9,10 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 from config import BOT_TOKEN, ADMIN_ID, MAX_PRODUCTS_TO_SHOW
 from database import init_db, add_user, save_product, get_products, get_stats
 from live_hunter import hunt_live, load_product_detail, format_live_products, format_product_detail
+from hunter import get_prospects, get_prospect, add_prospect, update_prospect_status, get_hunter_stats, get_hunter_profile, set_hunter_profile, build_outreach_message, prospect_card
 from product_analyzer import analyze_product
 from security import is_admin_update
-from keyboards import main_menu, back_button, analyzer_menu, hunter_menu, settings_menu, country_menu, currency_menu, budget_menu, hunter_categories_menu, HUNT_CATEGORIES, retry_hunt_button
+from keyboards import main_menu, back_button, analyzer_menu, hunter_menu, settings_menu, country_menu, currency_menu, budget_menu, hunter_categories_menu, HUNT_CATEGORIES, retry_hunt_button, hunter_main_menu, hunter_prospects_menu, prospect_detail_menu, hunter_back_menu
 from settings import COUNTRIES, CURRENCIES, get_user_settings, set_user_setting, country_label, currency_label
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -67,7 +68,136 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
     uid = query.from_user.id
 
-    if data == "find_product":
+    if data == "hunter_menu":
+        context.user_data.clear()
+        await query.edit_message_text(
+            "🏹 **HUNTER AI**\n\nJe t’aide à organiser ta prospection et à transformer des prospects en clients.",
+            reply_markup=hunter_main_menu(), parse_mode=ParseMode.MARKDOWN,
+        )
+
+    elif data == "hunter_find":
+        context.user_data["hunter_waiting_find"] = True
+        context.user_data["waiting_for_hunt"] = False
+        context.user_data["waiting_for_product"] = False
+        await query.edit_message_text(
+            "🎯 **TROUVER DES CLIENTS**\n\n"
+            "Décris ce que tu vends et le type de client recherché.\n\n"
+            "Exemple : `montage TikTok | restaurants et petites entreprises`",
+            reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN,
+        )
+
+    elif data == "hunter_add":
+        context.user_data["hunter_waiting_add"] = True
+        await query.edit_message_text(
+            "➕ **AJOUTER UN PROSPECT**\n\n"
+            "Envoie : `Nom | plateforme | contact | niche | besoin | score`\n\n"
+            "Exemple : `ABC Store | Instagram | @abcstore | mode | veut plus de vidéos | 85`",
+            reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN,
+        )
+
+    elif data == "hunter_prospects":
+        prospects = get_prospects(uid)
+        text = "👥 **MES PROSPECTS**\n\n"
+        text += "\n\n".join(prospect_card(p) for p in prospects) if prospects else "Aucun prospect pour le moment."
+        await query.edit_message_text(text, reply_markup=hunter_prospects_menu(prospects), parse_mode=ParseMode.MARKDOWN)
+
+    elif data.startswith("prospect:"):
+        try:
+            pid = int(data.split(":", 1)[1])
+        except ValueError:
+            await query.answer("Prospect invalide.", show_alert=True)
+            return
+        p = get_prospect(uid, pid)
+        if not p:
+            await query.answer("Prospect introuvable.", show_alert=True)
+            return
+        text = (
+            f"👤 **{p['name']}**\n\n"
+            f"📍 Plateforme : {p['platform']}\n"
+            f"📞 Contact : {p.get('contact') or '—'}\n"
+            f"🎯 Niche : {p.get('niche') or '—'}\n"
+            f"📝 Besoin : {p.get('need') or '—'}\n"
+            f"🧠 Score : **{p['score']}/100**\n"
+            f"📈 Statut : **{p['status']}**"
+        )
+        await query.edit_message_text(text, reply_markup=prospect_detail_menu(pid), parse_mode=ParseMode.MARKDOWN)
+
+    elif data.startswith("status:"):
+        parts = data.split(":")
+        if len(parts) != 3:
+            await query.answer("Action invalide.", show_alert=True)
+            return
+        try:
+            pid = int(parts[1])
+        except ValueError:
+            await query.answer("Prospect invalide.", show_alert=True)
+            return
+        update_prospect_status(uid, pid, parts[2])
+        p = get_prospect(uid, pid)
+        await query.answer("Statut mis à jour.")
+        await query.edit_message_text(
+            f"👤 **{p['name']}**\n\n📈 Statut : **{p['status']}**\n🧠 Score : **{p['score']}/100**",
+            reply_markup=prospect_detail_menu(pid), parse_mode=ParseMode.MARKDOWN
+        )
+
+    elif data == "hunter_message":
+        prospects = get_prospects(uid, 10)
+        if not prospects:
+            await query.edit_message_text(
+                "✍️ **GÉNÉRER UN MESSAGE**\n\nAjoute d’abord un prospect.",
+                reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN
+            )
+        else:
+            text = "✍️ **CHOISIS UN PROSPECT**\n\n" + "\n\n".join(prospect_card(p) for p in prospects)
+            await query.edit_message_text(text, reply_markup=hunter_prospects_menu(prospects), parse_mode=ParseMode.MARKDOWN)
+
+    elif data.startswith("message:"):
+        try:
+            pid = int(data.split(":", 1)[1])
+        except ValueError:
+            await query.answer("Prospect invalide.", show_alert=True)
+            return
+        p = get_prospect(uid, pid)
+        if not p:
+            await query.answer("Prospect introuvable.", show_alert=True)
+            return
+        profile = get_hunter_profile(uid)
+        msg = build_outreach_message(profile, p)
+        safe_msg = msg.replace("`", "'")
+        await query.edit_message_text(
+            f"✍️ **MESSAGE PERSONNALISÉ**\n\n`{safe_msg}`",
+            reply_markup=prospect_detail_menu(pid), parse_mode=ParseMode.MARKDOWN
+        )
+
+    elif data == "hunter_pipeline":
+        stats = get_hunter_stats(uid)
+        text = (
+            "📈 **SUIVI DES PROSPECTS**\n\n"
+            f"👥 Total : {stats['total']}\n"
+            f"🆕 Nouveaux : {stats['new_count']}\n"
+            f"📨 Contactés : {stats['contacted']}\n"
+            f"💬 Réponses : {stats['replied']}\n"
+            f"🔥 Qualifiés : {stats['qualified']}\n"
+            f"💰 Clients : {stats['won']}"
+        )
+        await query.edit_message_text(text, reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN)
+
+    elif data == "hunter_profile":
+        profile = get_hunter_profile(uid)
+        context.user_data["hunter_waiting_profile"] = True
+        await query.edit_message_text(
+            "🧠 **MON OFFRE / CIBLE**\n\n"
+            f"Offre actuelle : `{profile.get('offer') or 'non définie'}`\n"
+            f"Cible actuelle : `{profile.get('target') or 'non définie'}`\n\n"
+            "Envoie : `ton offre | ton client cible`",
+            reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN
+        )
+
+    elif data == "main_menu":
+        context.user_data.clear()
+        await query.edit_message_text("🤖 **DROPSHIP AI**\n\nChoisis :", reply_markup=main_menu(), parse_mode=ParseMode.MARKDOWN)
+
+    elif data == "find_product":
         context.user_data["waiting_for_hunt"] = False
         context.user_data["waiting_for_product"] = False
         await query.edit_message_text(
@@ -260,9 +390,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer("💾 Produit sauvegardé !", show_alert=True)
         await query.edit_message_text(format_live_products(results), reply_markup=hunter_menu(results), parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=True)
 
-    elif data == "main_menu":
-        context.user_data.clear()
-        await query.edit_message_text("🤖 **DROPSHIP AI**\n\nChoisis :", reply_markup=main_menu(), parse_mode=ParseMode.MARKDOWN)
     else:
         await query.edit_message_text("❌ Option inconnue.", reply_markup=back_button())
 
@@ -285,6 +412,63 @@ async def product_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin_update(update):
         return
     raw = (update.effective_message.text or "").strip()
+
+    if context.user_data.get("hunter_waiting_find"):
+        context.user_data["hunter_waiting_find"] = False
+        parts = [p.strip() for p in raw.split("|", 1)]
+        offer = parts[0] if parts else raw
+        target = parts[1] if len(parts) > 1 else "clients potentiels"
+        set_hunter_profile(update.effective_user.id, offer, target)
+        await update.effective_message.reply_text(
+            "🏹 **PLAN DE CHASSE PRÊT**\n\n"
+            f"💼 Offre : **{offer}**\n"
+            f"🎯 Cible : **{target}**\n\n"
+            "Hunter AI va utiliser cette offre/cible pour qualifier tes prospects et personnaliser les messages.\n\n"
+            "⚠️ Cette V1 ne contacte personne automatiquement : ajoute/importes les prospects que tu as le droit de contacter.",
+            reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN
+        )
+        return
+
+    if context.user_data.get("hunter_waiting_add"):
+        context.user_data["hunter_waiting_add"] = False
+        parts = [p.strip() for p in raw.split("|")]
+        if len(parts) < 2:
+            await update.effective_message.reply_text(
+                "❌ Format incorrect.\n\n`Nom | plateforme | contact | niche | besoin | score`",
+                reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN
+            )
+            return
+        name = parts[0]
+        platform = parts[1]
+        contact = parts[2] if len(parts) > 2 else ""
+        niche = parts[3] if len(parts) > 3 else ""
+        need = parts[4] if len(parts) > 4 else ""
+        try:
+            score = int(parts[5]) if len(parts) > 5 and parts[5] else 50
+        except ValueError:
+            score = 50
+        pid = add_prospect(update.effective_user.id, name, platform, contact, niche, need, score)
+        await update.effective_message.reply_text(
+            f"✅ Prospect **#{pid}** ajouté.\n\n{prospect_card(get_prospect(update.effective_user.id, pid))}",
+            reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN
+        )
+        return
+
+    if context.user_data.get("hunter_waiting_profile"):
+        context.user_data["hunter_waiting_profile"] = False
+        parts = [p.strip() for p in raw.split("|", 1)]
+        if len(parts) != 2:
+            await update.effective_message.reply_text(
+                "❌ Format incorrect : `ton offre | ton client cible`",
+                reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN
+            )
+            return
+        set_hunter_profile(update.effective_user.id, parts[0], parts[1])
+        await update.effective_message.reply_text(
+            "✅ **Profil Hunter enregistré.**",
+            reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN
+        )
+        return
 
     if context.user_data.get("waiting_for_hunt"):
         context.user_data["waiting_for_hunt"] = False

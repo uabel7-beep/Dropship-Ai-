@@ -6,6 +6,7 @@ def main_menu():
         [InlineKeyboardButton("🔎 Product Hunter", callback_data="find_product")],
         [InlineKeyboardButton("📦 Mes produits", callback_data="my_products")],
         [InlineKeyboardButton("🧠 Analyse manuelle", callback_data="analyze_product")],
+        [InlineKeyboardButton("🏹 Hunter AI — Trouver des clients", callback_data="hunter_menu")],
         [InlineKeyboardButton("⚙️ Paramètres", callback_data="settings")],
     ])
 
@@ -120,3 +121,49 @@ def hunter_categories_menu():
     rows.append([InlineKeyboardButton("✏️ Autre", callback_data="hunt_custom")])
     rows.append([InlineKeyboardButton("↩️ Retour", callback_data="main_menu")])
     return InlineKeyboardMarkup(rows)
+
+
+# ---------------- HUNTER AI ----------------
+
+def hunter_main_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎯 Trouver des clients", callback_data="hunter_find")],
+        [InlineKeyboardButton("👥 Mes prospects", callback_data="hunter_prospects")],
+        [InlineKeyboardButton("✍️ Générer un message", callback_data="hunter_message")],
+        [InlineKeyboardButton("📈 Suivi des prospects", callback_data="hunter_pipeline")],
+        [InlineKeyboardButton("🧠 Mon offre / cible", callback_data="hunter_profile")],
+        [InlineKeyboardButton("↩️ Retour", callback_data="main_menu")],
+    ])
+
+
+def hunter_prospects_menu(prospects):
+    rows = []
+    for p in prospects[:10]:
+        rows.append([InlineKeyboardButton(
+            f"#{p['id']} {p['name'][:24]} • {p['score']}/100",
+            callback_data=f"prospect:{p['id']}"
+        )])
+    rows.append([InlineKeyboardButton("➕ Ajouter un prospect", callback_data="hunter_add")])
+    rows.append([InlineKeyboardButton("↩️ Hunter AI", callback_data="hunter_menu")])
+    return InlineKeyboardMarkup(rows)
+
+
+def prospect_detail_menu(pid):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("✍️ Générer message", callback_data=f"message:{pid}")],
+        [
+            InlineKeyboardButton("📨 Contacté", callback_data=f"status:{pid}:contacted"),
+            InlineKeyboardButton("💬 Répondu", callback_data=f"status:{pid}:replied"),
+        ],
+        [
+            InlineKeyboardButton("🔥 Qualifié", callback_data=f"status:{pid}:qualified"),
+            InlineKeyboardButton("💰 Client", callback_data=f"status:{pid}:won"),
+        ],
+        [InlineKeyboardButton("↩️ Mes prospects", callback_data="hunter_prospects")],
+    ])
+
+
+def hunter_back_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("↩️ Hunter AI", callback_data="hunter_menu")],
+    ])

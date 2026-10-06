@@ -91,6 +91,11 @@ def init_db():
         """)
         conn.commit()
 
+        # Hunter AI tables are initialized alongside the existing Dropship database.
+        conn.execute("""CREATE TABLE IF NOT EXISTS prospects (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, name TEXT NOT NULL, platform TEXT NOT NULL, contact TEXT, niche TEXT, need TEXT, status TEXT NOT NULL DEFAULT 'new', score INTEGER NOT NULL DEFAULT 0, notes TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)""")
+        conn.execute("""CREATE TABLE IF NOT EXISTS hunter_settings (user_id INTEGER PRIMARY KEY, offer TEXT NOT NULL DEFAULT '', target TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, updated_at TEXT NOT NULL)""")
+        conn.commit()
+
 
 def get_settings(user_id):
     with closing(get_connection()) as conn:
