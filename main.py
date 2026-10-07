@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from functools import wraps
 
 from telegram import Update
@@ -675,8 +676,13 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 def main():
     init_db()
     if not BOT_TOKEN:
-        print("❌ BOT_TOKEN introuvable")
+        print("❌ BOT_TOKEN introuvable. Ajoute BOT_TOKEN dans Render > Environment Variables.")
         return
+    if not re.fullmatch(r"\d{6,20}:[A-Za-z0-9_-]{20,}", BOT_TOKEN):
+        print("❌ BOT_TOKEN invalide après nettoyage. Vérifie que la valeur Render contient uniquement le token BotFather, sans retour à la ligne.")
+        print(f"   Longueur reçue: {len(BOT_TOKEN)}")
+        return
+    print(f"🔐 BOT_TOKEN chargé ({len(BOT_TOKEN)} caractères, valeur masquée)")
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))

@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -7,7 +8,12 @@ load_dotenv(BASE_DIR / "token.env", override=False)
 load_dotenv(BASE_DIR / ".env", override=False)
 
 # Conservés exactement comme dans ton projet actuel.
-BOT_TOKEN = (os.getenv("BOT_TOKEN") or os.getenv("TELEGRAM_TOKEN") or "").strip()
+_raw_bot_token = os.getenv("BOT_TOKEN") or os.getenv("TELEGRAM_TOKEN") or ""
+# Render/secret managers can accidentally preserve a pasted line break or spaces.
+# Extract only a valid Telegram bot-token-shaped value so the HTTP URL never
+# contains non-printable characters.
+_match = re.search(r"\b(\d{6,20}:[A-Za-z0-9_-]{20,})\b", _raw_bot_token)
+BOT_TOKEN = _match.group(1) if _match else re.sub(r"\s+", "", _raw_bot_token).strip().strip('\"\'')
 try:
     ADMIN_ID = int(os.getenv("ADMIN_ID", "8519505699"))
 except ValueError:
