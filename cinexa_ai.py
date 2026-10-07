@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -23,8 +24,8 @@ except ImportError:  # optional until Cinexa is used
     OpenAI = None
 
 BASE_DIR = Path(__file__).resolve().parent
-WORK_DIR = BASE_DIR / "cinexa_output"
-WORK_DIR.mkdir(exist_ok=True)
+WORK_DIR = Path(os.getenv("CINEXA_OUTPUT_DIR", str(BASE_DIR / "cinexa_output")))
+WORK_DIR.mkdir(parents=True, exist_ok=True)
 
 STYLE_DEFAULT = "cinématique réaliste, narration storytelling, éclairage dramatique, détails naturels"
 
@@ -180,18 +181,18 @@ def _add_subtitles(video: Path, plan: dict[str, Any], scene_durations: list[floa
 
 
 def _srt_time(seconds: float) -> str:
-    ms = int(round((seconds - int(seconds)) * 1000))
-    total = int(seconds)
+    total_ms = max(0, int(round(float(seconds) * 1000)))
+    total, ms = divmod(total_ms, 1000)
     h, rem = divmod(total, 3600)
-    m, s = divmod(rem, 60)
-    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+    m, sec = divmod(rem, 60)
+    return f"{h:02d}:{m:02d}:{sec:02d},{ms:03d}"
 
 
 def generate_video(story: str, user_id: int, style: str = STYLE_DEFAULT, voice: str = "marin") -> tuple[Path, dict[str, Any]]:
     if not shutil.which("ffmpeg"):
         raise RuntimeError("FFmpeg est requis pour assembler la vidéo. Installe FFmpeg sur le serveur.")
     plan = _plan_story(story, style)
-    job = WORK_DIR / f"{user_id}_{int(asyncio.get_event_loop().time()*1000)}"
+    job = WORK_DIR / f"{user_id}_{int(time.time()*1000)}"
     job.mkdir(parents=True, exist_ok=True)
     (job / "plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
 

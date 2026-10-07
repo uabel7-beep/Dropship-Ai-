@@ -3,7 +3,9 @@ from urllib.parse import urljoin
 
 import requests
 
-BASE_URL = os.getenv("REEF_API_BASE_URL", "https://api.reefapi.com")
+from config import REEF_API_KEY, REEF_API_BASE_URL
+
+BASE_URL = REEF_API_BASE_URL
 SEARCH_PATH = "/aliexpress/v1/search"
 DETAIL_PATH = "/aliexpress/v1/product_detail"
 
@@ -13,11 +15,11 @@ class ReefAPIError(RuntimeError):
 
 
 def configured():
-    return bool(os.getenv("REEF_API_KEY", "").strip()) and os.getenv("REEF_API_KEY", "").strip() != "COLLE_TA_CLE_REEF_ICI"
+    return bool(REEF_API_KEY.strip()) and REEF_API_KEY.strip() != "COLLE_TA_CLE_REEF_ICI"
 
 
 def _request(path, payload, timeout=12):
-    api_key = os.getenv("REEF_API_KEY", "").strip()
+    api_key = REEF_API_KEY.strip()
     if not api_key or api_key == "COLLE_TA_CLE_REEF_ICI":
         raise ReefAPIError("Clé ReefAPI manquante.")
 

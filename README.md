@@ -52,7 +52,7 @@ Le pipeline crée automatiquement :
 - un MP4 final.
 
 ### Configuration
-Ajoute dans `token.env` ou `.env` :
+Copie `token.env.example` en `token.env`, puis ajoute tes clés uniquement dans `token.env` :
 
 ```env
 OPENAI_API_KEY=ta_cle
@@ -61,7 +61,7 @@ CINEXA_IMAGE_MODEL=gpt-image-2
 CINEXA_TTS_MODEL=gpt-4o-mini-tts
 ```
 
-Le serveur doit également disposer de `ffmpeg` et `ffprobe`.
+Le serveur doit également disposer de `ffmpeg` et `ffprobe`. Ne publie jamais `token.env` sur GitHub.
 
 ### Utilisation Telegram
 Menu principal → **🎬 Cinexa AI — Créer une vidéo** → envoie simplement l'histoire ou le script. Aucun découpage manuel n'est nécessaire.

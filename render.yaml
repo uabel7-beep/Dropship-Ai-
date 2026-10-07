@@ -1,0 +1,25 @@
+services:
+  - type: worker
+    name: dropship-ai
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_ID
+        value: "8519505699"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_PLACES_API_KEY
+        sync: false
+      - key: REEF_API_KEY
+        sync: false
+      - key: REEF_API_BASE_URL
+        value: "https://api.reefapi.com"
+      - key: CINEXA_TEXT_MODEL
+        value: "gpt-6-luna"
+      - key: CINEXA_IMAGE_MODEL
+        value: "gpt-image-2.5-flare"
+      - key: CINEXA_TTS_MODEL
+        value: "gpt-4o-mini-tts"
