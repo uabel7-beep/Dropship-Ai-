@@ -10,7 +10,7 @@ from config import BOT_TOKEN, ADMIN_ID, MAX_PRODUCTS_TO_SHOW
 from database import init_db, add_user, save_product, get_products, get_stats
 from live_hunter import hunt_live, load_product_detail, format_live_products, format_product_detail
 from hunter import get_prospects, get_prospect, add_prospect, update_prospect_status, get_hunter_stats, get_hunter_profile, set_hunter_profile, build_outreach_message, prospect_card, prospect_exists
-from lead_finder import find_leads
+from lead_finder import find_leads, infer_prospect_queries, infer_buyer_profile
 from product_analyzer import analyze_product
 from security import is_admin_update
 from keyboards import main_menu, back_button, analyzer_menu, hunter_menu, settings_menu, country_menu, currency_menu, budget_menu, hunter_categories_menu, HUNT_CATEGORIES, retry_hunt_button, hunter_main_menu, hunter_prospects_menu, prospect_detail_menu, hunter_back_menu, hunter_results_menu
@@ -82,9 +82,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["waiting_for_product"] = False
         await query.edit_message_text(
             "🎯 **TROUVER DES CLIENTS**\n\n"
-            "Je vais chercher des entreprises publiques correspondant à ta cible, puis les scorer et les ajouter à ton pipeline.\n\n"
-            "Envoie : `offre | type de client | ville`\n\n"
-            "Exemple : `montage TikTok | restaurants | Lubumbashi`",
+            "Décris simplement ce que tu vends. Hunter va comprendre l'offre, élargir automatiquement les profils d'acheteurs possibles et chercher plusieurs catégories de prospects.\n\n"
+            "Envoie simplement : `ce que tu vends`\n\n"
+            "Exemple : `je vends un téléphone`\n"
+            "💡 Tu peux aussi préciser une ville si tu veux limiter la recherche : `je vends un téléphone | Lubumbashi`",
             reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN,
         )
 
@@ -435,23 +436,34 @@ async def product_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if context.user_data.get("hunter_waiting_find"):
         context.user_data["hunter_waiting_find"] = False
-        parts = [p.strip() for p in raw.split("|")]
-        if len(parts) != 3:
+        parts = [p.strip() for p in raw.split("|", 1)]
+        if not parts or not parts[0]:
             await update.effective_message.reply_text(
-                "❌ Format incorrect.\n\n`offre | type de client | ville`\n\nExemple : `montage TikTok | restaurants | Lubumbashi`",
+                "❌ Décris simplement ce que tu vends.\n\nExemple : `je vends un téléphone`",
                 reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN
             )
             return
-        offer, target, city = parts
+        offer = parts[0]
+        city = parts[1] if len(parts) > 1 else ""
+        queries = infer_prospect_queries(offer)
+        target = infer_buyer_profile(offer, queries)
         set_hunter_profile(update.effective_user.id, offer, target)
-        await update.effective_message.reply_text("🔎 **HUNTER AI : recherche des prospects...**\n\n⏳ Analyse des entreprises publiques en cours.", parse_mode=ParseMode.MARKDOWN)
+        location_text = f"📍 Zone : {city}" if city else "🌍 Zone : recherche généralisée"
+        await update.effective_message.reply_text(
+            "🔎 **HUNTER AI : recherche des prospects...**\n\n"
+            f"💼 Offre : **{offer}**\n{location_text}\n\n"
+            "🧠 J'élargis automatiquement la recherche vers plusieurs profils d'acheteurs...\n"
+            f"🎯 Catégories détectées : **{', '.join(queries[:5])}**",
+            parse_mode=ParseMode.MARKDOWN
+        )
         try:
-            leads, provider = await find_leads(target, city, limit=20)
+            leads, provider, queries_used = await find_leads(offer, city, limit=20)
         except Exception as exc:
             logger.warning("Hunter lead search error: %s", exc)
             await update.effective_message.reply_text(
                 "⚠️ **Recherche impossible pour le moment.**\n\n"
-                "Vérifie la ville ou réessaie plus tard.",
+                "Hunter a compris ton offre, mais aucune source publique n'a pu fournir de résultats.\n"
+                "Tu peux réessayer ou préciser une ville pour élargir la recherche locale.",
                 reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN
             )
             return
@@ -462,8 +474,8 @@ async def product_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pid = add_prospect(
                 update.effective_user.id, lead["name"], lead.get("platform", provider),
                 lead.get("contact", ""), target, "", lead.get("score", 50),
-                notes=f"Trouvé par Hunter dans {city}", website=lead.get("website", ""),
-                address=lead.get("address", ""), phone=lead.get("phone", ""),
+                notes=f"Trouvé par Hunter à partir de l'offre : {offer}" + (f" dans {city}" if city else " (recherche généralisée)"),
+                website=lead.get("website", ""), address=lead.get("address", ""), phone=lead.get("phone", ""),
                 source=lead.get("source", provider), external_id=lead.get("external_id", ""),
                 rating=lead.get("rating"), review_count=lead.get("review_count", 0), maps_url=lead.get("maps_url", "")
             )
@@ -474,7 +486,8 @@ async def product_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN
             )
             return
-        text = (f"🏹 **CHASSE TERMINÉE**\n\n💼 {offer}\n🎯 {target}\n📍 {city}\n\n"
+        text = (f"🏹 **CHASSE TERMINÉE**\n\n💼 {offer}\n{location_text}\n"
+                f"🧠 Recherche généralisée sur **{len(queries_used)} catégories**\n\n"
                 f"🔥 **{len(saved)} nouveaux prospects** ajoutés.\n\n" + "\n\n".join(prospect_card(p) for p in saved[:10]))
         await update.effective_message.reply_text(text, reply_markup=hunter_results_menu(saved), parse_mode=ParseMode.MARKDOWN)
         return
@@ -482,10 +495,11 @@ async def product_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("hunter_waiting_quick"):
         context.user_data["hunter_waiting_quick"] = False
         profile = get_hunter_profile(update.effective_user.id)
-        city = raw
-        await update.effective_message.reply_text("⚡ **CHASSE RAPIDE...**\n\n🔎 Recherche des prospects publics.", parse_mode=ParseMode.MARKDOWN)
+        city = raw.strip()
+        offer = profile.get("offer") or "mon offre"
+        await update.effective_message.reply_text("⚡ **CHASSE RAPIDE...**\n\n🔎 Hunter élargit la recherche à plusieurs profils d'acheteurs.", parse_mode=ParseMode.MARKDOWN)
         try:
-            leads, provider = await find_leads(profile.get("target") or "entreprises", city, limit=20)
+            leads, provider, _queries = await find_leads(offer, city, limit=20)
         except Exception as exc:
             logger.warning("Hunter quick search error: %s", exc)
             await update.effective_message.reply_text("⚠️ **Recherche impossible.**", reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN)
