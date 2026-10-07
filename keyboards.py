@@ -3,6 +3,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 def main_menu():
     return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎬 Cinexa AI — Créer une vidéo", callback_data="cinexa_menu")],
         [InlineKeyboardButton("🔎 Product Hunter", callback_data="find_product")],
         [InlineKeyboardButton("📦 Mes produits", callback_data="my_products")],
         [InlineKeyboardButton("🧠 Analyse manuelle", callback_data="analyze_product")],
@@ -185,4 +186,17 @@ def hunter_results_menu(results):
 def hunter_back_menu():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("↩️ Hunter AI", callback_data="hunter_menu")],
+    ])
+
+# ---------------- CINEXA AI ----------------
+def cinexa_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎬 Créer une vidéo", callback_data="cinexa_create")],
+        [InlineKeyboardButton("↩️ Retour", callback_data="main_menu")],
+    ])
+
+
+def cinexa_working_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("↩️ Retour", callback_data="cinexa_menu")],
     ])

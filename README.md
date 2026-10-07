@@ -38,3 +38,30 @@ Hunter AI peut maintenant rechercher des entreprises publiques par **cible + vil
 - Le bot ne spamme pas et n'envoie aucun message automatiquement. Les messages sont préparés pour validation humaine.
 
 Variables : `BOT_TOKEN`, `ADMIN_ID` (ou valeur actuelle dans config), `GOOGLE_PLACES_API_KEY`, `DROPSHIP_DB`.
+
+## Cinexa AI
+
+Cinexa transforme une histoire ou un script en vidéo narrative verticale 9:16.
+Le pipeline crée automatiquement :
+- une bible des personnages et des lieux ;
+- un découpage en scènes ;
+- des prompts visuels cohérents ;
+- une narration française par scène ;
+- des mouvements de caméra sur les images ;
+- des sous-titres synchronisés ;
+- un MP4 final.
+
+### Configuration
+Ajoute dans `token.env` ou `.env` :
+
+```env
+OPENAI_API_KEY=ta_cle
+CINEXA_TEXT_MODEL=gpt-6-luna
+CINEXA_IMAGE_MODEL=gpt-image-2
+CINEXA_TTS_MODEL=gpt-4o-mini-tts
+```
+
+Le serveur doit également disposer de `ffmpeg` et `ffprobe`.
+
+### Utilisation Telegram
+Menu principal → **🎬 Cinexa AI — Créer une vidéo** → envoie simplement l'histoire ou le script. Aucun découpage manuel n'est nécessaire.

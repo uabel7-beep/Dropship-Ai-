@@ -7,7 +7,7 @@ load_dotenv(BASE_DIR / "token.env", override=False)
 load_dotenv(BASE_DIR / ".env", override=False)
 
 # Conservés exactement comme dans ton projet actuel.
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8721671832:AAF3os33FXhMIZ_sHt_FDUjKJWSnM8VipfA")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 ADMIN_ID = 8519505699
 
 DB_NAME = os.getenv("DROPSHIP_DB", "dropship_ai.db")
@@ -15,7 +15,7 @@ MAX_PRODUCT_NAME_LENGTH = 120
 MAX_PRODUCTS_TO_SHOW = 10
 
 # Optional live Product Hunter settings. Leave empty until API access is available.
-REEF_API_KEY = os.getenv("REEF_API_KEY", "ak_live_BN_sT72dzyhO7Bv-y0m5MOFsvi-mpsOt")
+REEF_API_KEY = os.getenv("REEF_API_KEY", "")
 REEF_API_BASE_URL = os.getenv("REEF_API_BASE_URL", "https://api.reefapi.com")
 
 # Profit Engine assumptions (kept simple and visible in the code).
@@ -29,3 +29,9 @@ LIVE_DETAIL_TIMEOUT = 15
 GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
 HUNTER_SEARCH_TIMEOUT = 15
 HUNTER_MAX_RESULTS = 20
+
+# Cinexa AI
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+CINEXA_TEXT_MODEL = os.getenv("CINEXA_TEXT_MODEL", "gpt-6-luna")
+CINEXA_IMAGE_MODEL = os.getenv("CINEXA_IMAGE_MODEL", "gpt-image-2")
+CINEXA_TTS_MODEL = os.getenv("CINEXA_TTS_MODEL", "gpt-4o-mini-tts")

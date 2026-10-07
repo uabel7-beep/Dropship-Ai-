@@ -12,8 +12,9 @@ from live_hunter import hunt_live, load_product_detail, format_live_products, fo
 from hunter import get_prospects, get_prospect, add_prospect, update_prospect_status, get_hunter_stats, get_hunter_profile, set_hunter_profile, build_outreach_message, prospect_card, prospect_exists
 from lead_finder import find_leads, infer_prospect_queries, infer_buyer_profile
 from product_analyzer import analyze_product
+from cinexa_ai import generate_video
 from security import is_admin_update
-from keyboards import main_menu, back_button, analyzer_menu, hunter_menu, settings_menu, country_menu, currency_menu, budget_menu, hunter_categories_menu, HUNT_CATEGORIES, retry_hunt_button, hunter_main_menu, hunter_prospects_menu, prospect_detail_menu, hunter_back_menu, hunter_results_menu
+from keyboards import main_menu, back_button, analyzer_menu, hunter_menu, settings_menu, country_menu, currency_menu, budget_menu, hunter_categories_menu, HUNT_CATEGORIES, retry_hunt_button, hunter_main_menu, hunter_prospects_menu, prospect_detail_menu, hunter_back_menu, hunter_results_menu, cinexa_menu, cinexa_working_menu
 from settings import COUNTRIES, CURRENCIES, get_user_settings, set_user_setting, country_label, currency_label
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -69,7 +70,32 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
     uid = query.from_user.id
 
-    if data == "hunter_menu":
+    if data == "cinexa_menu":
+        context.user_data.clear()
+        await query.edit_message_text(
+            "🎬 **CINEXA AI**\n\n"
+            "Transforme une histoire ou un script en vidéo narrative française.\n\n"
+            "🧠 Compréhension de l'histoire\n"
+            "🎭 Cohérence des personnages\n"
+            "🎨 Images scène par scène\n"
+            "🎙️ Narration française\n"
+            "📝 Sous-titres\n"
+            "🎞️ Montage vertical 9:16",
+            reply_markup=cinexa_menu(), parse_mode=ParseMode.MARKDOWN,
+        )
+
+    elif data == "cinexa_create":
+        context.user_data.clear()
+        context.user_data["cinexa_waiting_story"] = True
+        await query.edit_message_text(
+            "🎬 **NOUVELLE VIDÉO**\n\n"
+            "Envoie-moi simplement ton **histoire ou ton script**.\n\n"
+            "Tu n'as pas besoin de découper les scènes, choisir les images ou écrire les prompts : **Cinexa s'occupe du reste.**\n\n"
+            "💡 Exemple :\n`Un jeune homme découvre une mystérieuse boîte dans une ruelle...`",
+            reply_markup=cinexa_working_menu(), parse_mode=ParseMode.MARKDOWN,
+        )
+
+    elif data == "hunter_menu":
         context.user_data.clear()
         await query.edit_message_text(
             "🏹 **HUNTER AI**\n\nJe t’aide à organiser ta prospection et à transformer des prospects en clients.",
@@ -553,6 +579,47 @@ async def product_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "✅ **Profil Hunter enregistré.**",
             reply_markup=hunter_back_menu(), parse_mode=ParseMode.MARKDOWN
         )
+        return
+
+    if context.user_data.get("cinexa_waiting_story"):
+        context.user_data["cinexa_waiting_story"] = False
+        story = raw.strip()
+        if len(story) < 20:
+            context.user_data["cinexa_waiting_story"] = True
+            await update.effective_message.reply_text(
+                "❌ Ton histoire est trop courte. Envoie au moins quelques phrases pour que Cinexa puisse construire les scènes.",
+                reply_markup=cinexa_working_menu(),
+            )
+            return
+        await update.effective_message.reply_text(
+            "🎬 **CINEXA EN ACTION...**\n\n"
+            "🧠 Analyse de l'histoire\n"
+            "🎭 Bible des personnages\n"
+            "🌍 Bible de l'univers\n"
+            "🎞️ Découpage des scènes\n"
+            "🎨 Génération des visuels\n"
+            "🎙️ Narration française\n"
+            "📝 Sous-titres\n"
+            "✂️ Montage final\n\n"
+            "⏳ Quelques minutes peuvent être nécessaires selon le nombre de scènes.",
+            reply_markup=cinexa_working_menu(), parse_mode=ParseMode.MARKDOWN
+        )
+        try:
+            video_path, plan = await asyncio.to_thread(generate_video, story, update.effective_user.id)
+            with video_path.open("rb") as video_file:
+                await update.effective_message.reply_video(
+                    video=video_file,
+                    caption=f"🎬 **CINEXA AI — {plan.get('title', 'Vidéo')}**\n\n✨ Générée automatiquement à partir de ton histoire.",
+                    parse_mode=ParseMode.MARKDOWN,
+                    supports_streaming=True,
+                )
+            await update.effective_message.reply_text("🔥 Vidéo terminée. Tu peux en créer une autre.", reply_markup=cinexa_menu())
+        except Exception as exc:
+            logger.exception("Cinexa generation error")
+            await update.effective_message.reply_text(
+                f"⚠️ **Cinexa n'a pas pu terminer la vidéo.**\n\n`{str(exc)[:500]}`\n\nVérifie OPENAI_API_KEY et FFmpeg sur le serveur.",
+                reply_markup=cinexa_menu(), parse_mode=ParseMode.MARKDOWN
+            )
         return
 
     if context.user_data.get("waiting_for_hunt"):
