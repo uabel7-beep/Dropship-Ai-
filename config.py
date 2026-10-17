@@ -24,7 +24,7 @@ MAX_PRODUCT_NAME_LENGTH = 120
 MAX_PRODUCTS_TO_SHOW = 10
 
 # Optional live Product Hunter settings. Leave empty until API access is available.
-REEF_API_KEY =ak_live_BN_sT72dzyhO7Bv-y0m5MOFsvi-mpsOt
+REEF_API_KEY = ak_live_BN_sT72dzyhO7Bv-y0m5MOFsvi-mpsOt
 REEF_API_BASE_URL = os.getenv("REEF_API_BASE_URL", "https://api.reefapi.com")
 
 # Profit Engine assumptions (kept simple and visible in the code).
